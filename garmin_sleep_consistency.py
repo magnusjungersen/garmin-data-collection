@@ -51,7 +51,7 @@ def compute_window_averages(rows: list[dict], days: int) -> dict:
         "avg_bed": avg_bed,
         "avg_wake": avg_wake,
         "avg_dur_min": avg_dur_min,
-        "start_date": subset[0]["date"].isoformat(),
+        "start_date": (subset[0]["date"] - timedelta(days=1)).isoformat(),
     }
 
 
@@ -110,8 +110,9 @@ def main():
             cmin=50,
             cmax=90,
             colorbar=dict(
-                title=dict(text="Sleep score", side="right"),
+                title=dict(text="Sleep score", side="right", font=dict(color="#e0e0e0")),
                 tickvals=[50, 60, 70, 80, 90],
+                tickfont=dict(color="#e0e0e0"),
             ),
         ),
         hovertext=hover_texts,
@@ -130,7 +131,7 @@ def main():
             x=[line_x_start, line_x_end],
             y=[a["avg_bed"], a["avg_bed"]],
             mode="lines",
-            line=dict(color="#1A5276", width=2, dash="solid"),
+            line=dict(color="#7EB8F7", width=2, dash="solid"),
             name=f"Avg bedtime: {shifted_to_label(a['avg_bed'])}",
             hoverinfo="skip",
             visible=visible,
@@ -140,7 +141,7 @@ def main():
             x=[line_x_start, line_x_end],
             y=[a["avg_wake"], a["avg_wake"]],
             mode="lines",
-            line=dict(color="#1ABC9C", width=2, dash="dot"),
+            line=dict(color="#56D9B1", width=2, dash="dot"),
             name=f"Avg wake: {shifted_to_label(a['avg_wake'])} · Avg duration: {dur_label}",
             hoverinfo="skip",
             visible=visible,
@@ -170,8 +171,14 @@ def main():
     y_ticks = [i * 2 for i in range(3, 12)]  # shifted: 6, 8, 10, ... 22
     y_labels = [shifted_to_label(h) for h in y_ticks]
 
+    dark_bg = "#1e1e2e"
+    dark_surface = "#2a2a3e"
+    dark_grid = "rgba(255,255,255,0.08)"
+    font_color = "#e0e0e0"
+
     fig.update_layout(
-        title=dict(text="Sleep Consistency", font=dict(size=20)),
+        title=dict(text="Sleep Consistency", font=dict(size=20, color=font_color)),
+        font=dict(color=font_color),
         updatemenus=[dict(
             type="buttons",
             direction="right",
@@ -180,14 +187,18 @@ def main():
             showactive=True,
             active=0,
             buttons=buttons,
-            bgcolor="#f0f0f0",
-            bordercolor="#cccccc",
+            bgcolor=dark_surface,
+            bordercolor="#555577",
+            font=dict(color=font_color),
         )],
         xaxis=dict(
             title="Date",
             type="date",
             range=[avgs[7]["start_date"], line_x_end],
-            rangeslider=dict(visible=True, thickness=0.08),
+            rangeslider=dict(visible=True, thickness=0.08, bgcolor=dark_surface),
+            gridcolor=dark_grid,
+            linecolor="#444466",
+            tickcolor="#444466",
         ),
         yaxis=dict(
             title="Time of day",
@@ -195,10 +206,18 @@ def main():
             ticktext=y_labels,
             range=[5, 23],
             fixedrange=True,
+            gridcolor=dark_grid,
+            linecolor="#444466",
+            tickcolor="#444466",
         ),
-        legend=dict(orientation="h", y=-0.25),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
+        legend=dict(
+            orientation="h",
+            y=-0.25,
+            bgcolor="rgba(0,0,0,0)",
+            font=dict(color=font_color),
+        ),
+        plot_bgcolor=dark_bg,
+        paper_bgcolor=dark_bg,
         height=560,
         bargap=0.25,
         margin=dict(t=80, b=100),
@@ -209,7 +228,17 @@ def main():
         include_plotlyjs="cdn",
         full_html=True,
         config={"displayModeBar": False},
+        div_id="sleep-chart",
     )
+    # Inject dark background on the page itself so there's no white flash
+    with open(OUTPUT, "r") as f:
+        html = f.read()
+    html = html.replace(
+        "<head>",
+        '<head><style>body{background:#1e1e2e;margin:0;padding:0;}</style>',
+    )
+    with open(OUTPUT, "w") as f:
+        f.write(html)
     print(f"Chart saved to {OUTPUT}")
 
 
