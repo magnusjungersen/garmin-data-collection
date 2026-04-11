@@ -4,6 +4,7 @@ Reads from Google Sheets via garmin_data.py — no direct Garmin API calls.
 """
 
 import os
+from datetime import timedelta
 import plotly.graph_objects as go
 from garmin_data import fetch_sleep_data
 
@@ -65,6 +66,8 @@ def main():
         return
 
     dates = [r["date"].isoformat() for r in rows]
+    line_x_start = (rows[0]["date"] - timedelta(days=1)).isoformat()
+    line_x_end = (rows[-1]["date"] + timedelta(days=1)).isoformat()
     bedtime_h = [to_shifted_hours(r["sleep_start"]) for r in rows]
     wake_h = [to_shifted_hours(r["sleep_end"]) for r in rows]
     durations = [w - b for b, w in zip(bedtime_h, wake_h)]
@@ -124,7 +127,7 @@ def main():
         visible = i == 0  # only 7d visible by default
 
         fig.add_trace(go.Scatter(
-            x=[dates[0], dates[-1]],
+            x=[line_x_start, line_x_end],
             y=[a["avg_bed"], a["avg_bed"]],
             mode="lines",
             line=dict(color="#1A5276", width=2, dash="solid"),
@@ -134,7 +137,7 @@ def main():
         ))
 
         fig.add_trace(go.Scatter(
-            x=[dates[0], dates[-1]],
+            x=[line_x_start, line_x_end],
             y=[a["avg_wake"], a["avg_wake"]],
             mode="lines",
             line=dict(color="#1ABC9C", width=2, dash="dot"),
@@ -159,7 +162,7 @@ def main():
             method="update",
             args=[
                 {"visible": make_visibility(i)},
-                {"xaxis.range": [a["start_date"], dates[-1]]},
+                {"xaxis.range": [a["start_date"], line_x_end]},
             ],
         ))
 
@@ -183,7 +186,7 @@ def main():
         xaxis=dict(
             title="Date",
             type="date",
-            range=[avgs[7]["start_date"], dates[-1]],
+            range=[avgs[7]["start_date"], line_x_end],
             rangeslider=dict(visible=True, thickness=0.08),
         ),
         yaxis=dict(
