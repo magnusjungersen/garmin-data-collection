@@ -188,7 +188,7 @@ def main():
 
     # Y-axis ticks: every 2 hours from 20:00 to 11:00 next day
     # In shifted hours: 20:00=8, 22:00=10, 00:00=12, ..., 10:00=22, 11:00=23
-    y_ticks = list(range(8, 23, 2)) + [23]
+    y_ticks = list(range(10, 23, 2)) + [23]
     y_labels = [shifted_to_label(h) for h in y_ticks]
 
     dark_bg = "#1e1e2e"
@@ -231,7 +231,7 @@ def main():
             title="Time of day",
             tickvals=y_ticks,
             ticktext=y_labels,
-            range=[7.5, 23.5],
+            range=[9.5, 23.5],
             fixedrange=True,
             gridcolor=dark_grid,
             linecolor="#444466",
