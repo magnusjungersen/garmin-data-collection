@@ -155,6 +155,22 @@ def main():
             vis += [i == active_idx, i == active_idx]
         return vis
 
+    def make_annotation(a: dict) -> dict:
+        dur = f"{a['avg_dur_min'] // 60}h {a['avg_dur_min'] % 60:02d}m"
+        return dict(
+            text=(
+                f"<b>Avg</b>  "
+                f"sleep {shifted_to_label(a['avg_bed'])} "
+                f"· wake {shifted_to_label(a['avg_wake'])} "
+                f"· {dur}"
+            ),
+            x=1.0, y=1.065,
+            xref="paper", yref="paper",
+            xanchor="right", yanchor="middle",
+            showarrow=False,
+            font=dict(color="#a0a0c0", size=12),
+        )
+
     buttons = []
     for i, w in enumerate(WINDOWS):
         a = avgs[w]
@@ -163,7 +179,10 @@ def main():
             method="update",
             args=[
                 {"visible": make_visibility(i)},
-                {"xaxis.range": [a["start_date"], line_x_end]},
+                {
+                    "xaxis.range": [a["start_date"], line_x_end],
+                    "annotations": [make_annotation(a)],
+                },
             ],
         ))
 
@@ -172,30 +191,37 @@ def main():
     y_labels = [shifted_to_label(h) for h in y_ticks]
 
     dark_bg = "#1e1e2e"
-    dark_surface = "#2a2a3e"
     dark_grid = "rgba(255,255,255,0.08)"
     font_color = "#e0e0e0"
 
     fig.update_layout(
-        title=dict(text="Sleep Consistency", font=dict(size=20, color=font_color)),
+        title=dict(
+            text="Sleep Consistency",
+            font=dict(size=20, color=font_color),
+            x=0.5,
+            xanchor="center",
+            y=0.97,
+        ),
         font=dict(color=font_color),
+        annotations=[make_annotation(avgs[7])],
         updatemenus=[dict(
             type="buttons",
             direction="right",
-            x=0.0,
+            x=0.5,
+            xanchor="center",
             y=1.12,
             showactive=True,
             active=0,
             buttons=buttons,
-            bgcolor=dark_surface,
-            bordercolor="#555577",
-            font=dict(color=font_color),
+            bgcolor="#c0c0d8",
+            bordercolor="#888899",
+            font=dict(color="#1e1e2e"),
         )],
         xaxis=dict(
             title="Date",
             type="date",
             range=[avgs[7]["start_date"], line_x_end],
-            rangeslider=dict(visible=True, thickness=0.08, bgcolor=dark_surface),
+            rangeslider=dict(visible=True, thickness=0.08, bgcolor="#2a2a3e"),
             gridcolor=dark_grid,
             linecolor="#444466",
             tickcolor="#444466",
