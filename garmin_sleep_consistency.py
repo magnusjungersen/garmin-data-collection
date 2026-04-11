@@ -186,8 +186,9 @@ def main():
             ],
         ))
 
-    # Y-axis ticks: every 2 hours from 6 PM to 10 AM next day
-    y_ticks = [i * 2 for i in range(3, 12)]  # shifted: 6, 8, 10, ... 22
+    # Y-axis ticks: every 2 hours from 20:00 to 11:00 next day
+    # In shifted hours: 20:00=8, 22:00=10, 00:00=12, ..., 10:00=22, 11:00=23
+    y_ticks = list(range(8, 23, 2)) + [23]
     y_labels = [shifted_to_label(h) for h in y_ticks]
 
     dark_bg = "#1e1e2e"
@@ -207,8 +208,8 @@ def main():
         updatemenus=[dict(
             type="buttons",
             direction="right",
-            x=0.5,
-            xanchor="center",
+            x=0.0,
+            xanchor="left",
             y=1.12,
             showactive=True,
             active=0,
@@ -230,18 +231,13 @@ def main():
             title="Time of day",
             tickvals=y_ticks,
             ticktext=y_labels,
-            range=[5, 23],
+            range=[7.5, 23.5],
             fixedrange=True,
             gridcolor=dark_grid,
             linecolor="#444466",
             tickcolor="#444466",
         ),
-        legend=dict(
-            orientation="h",
-            y=-0.25,
-            bgcolor="rgba(0,0,0,0)",
-            font=dict(color=font_color),
-        ),
+        showlegend=False,
         plot_bgcolor=dark_bg,
         paper_bgcolor=dark_bg,
         height=560,
