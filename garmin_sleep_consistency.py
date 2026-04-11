@@ -1,0 +1,214 @@
+"""
+Generates an interactive sleep window timeline and saves it to docs/sleep_consistency.html.
+Reads from Google Sheets via garmin_data.py — no direct Garmin API calls.
+"""
+
+import os
+import plotly.graph_objects as go
+from garmin_data import fetch_sleep_data
+
+OUTPUT = "docs/sleep_consistency.html"
+DAYS = 30
+WINDOWS = [7, 14, 30]
+
+
+def to_shifted_hours(dt) -> float:
+    """
+    Express a time as hours since the previous noon (12:00).
+    Maps the sleep-relevant window to a positive linear scale:
+        noon     →  0.0
+        8 PM     →  8.0
+        midnight → 12.0
+        6 AM     → 18.0
+    Sleep bars always have bedtime < wake time as positive numbers.
+    """
+    h = dt.hour + dt.minute / 60 + dt.second / 3600
+    if h < 12:
+        h += 24
+    return h - 12
+
+
+def shifted_to_label(h: float) -> str:
+    total = (h + 12) % 24
+    hours = int(total)
+    minutes = int(round((total - hours) * 60))
+    if minutes == 60:
+        hours += 1
+        minutes = 0
+    return f"{hours:02d}:{minutes:02d}"
+
+
+def compute_window_averages(rows: list[dict], days: int) -> dict:
+    subset = rows[-days:]
+    bed_hours = [to_shifted_hours(r["sleep_start"]) for r in subset]
+    wake_hours = [to_shifted_hours(r["sleep_end"]) for r in subset]
+    durations = [w - b for b, w in zip(bed_hours, wake_hours)]
+    avg_bed = sum(bed_hours) / len(bed_hours)
+    avg_wake = sum(wake_hours) / len(wake_hours)
+    avg_dur_min = round(sum(durations) / len(durations) * 60)
+    return {
+        "avg_bed": avg_bed,
+        "avg_wake": avg_wake,
+        "avg_dur_min": avg_dur_min,
+        "start_date": subset[0]["date"].isoformat(),
+    }
+
+
+def main():
+    os.makedirs("docs", exist_ok=True)
+
+    print(f"Reading {DAYS} days of sleep data from Sheets...")
+    rows = fetch_sleep_data(days=DAYS)
+
+    if not rows:
+        print("No data available.")
+        return
+
+    dates = [r["date"].isoformat() for r in rows]
+    bedtime_h = [to_shifted_hours(r["sleep_start"]) for r in rows]
+    wake_h = [to_shifted_hours(r["sleep_end"]) for r in rows]
+    durations = [w - b for b, w in zip(bedtime_h, wake_h)]
+    scores = [r["sleep_score"] or 0 for r in rows]
+
+    duration_labels = [
+        f"{r['total_sleep_seconds'] // 3600}h {(r['total_sleep_seconds'] % 3600) // 60:02d}m"
+        for r in rows
+    ]
+
+    hover_texts = [
+        (
+            f"<b>{r['date'].strftime('%A, %b %d')}</b><br>"
+            f"Bedtime: {r['sleep_start'].strftime('%H:%M')}<br>"
+            f"Wake: {r['sleep_end'].strftime('%H:%M')}<br>"
+            f"Duration: {r['total_sleep_seconds'] // 3600}h "
+            f"{(r['total_sleep_seconds'] % 3600) // 60}m<br>"
+            f"Sleep score: {r['sleep_score']}"
+        )
+        for r in rows
+    ]
+
+    # Precompute averages for each window
+    avgs = {w: compute_window_averages(rows, min(w, len(rows))) for w in WINDOWS}
+
+    fig = go.Figure()
+
+    # Trace 0: sleep window bars (always visible)
+    fig.add_trace(go.Bar(
+        x=dates,
+        y=durations,
+        base=bedtime_h,
+        text=duration_labels,
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(color="white", size=10, family="monospace"),
+        marker=dict(
+            color=scores,
+            colorscale="Viridis",
+            cmin=50,
+            cmax=90,
+            colorbar=dict(
+                title=dict(text="Sleep score", side="right"),
+                tickvals=[50, 60, 70, 80, 90],
+            ),
+        ),
+        hovertext=hover_texts,
+        hoverinfo="text",
+        name="Sleep window",
+    ))
+
+    # Traces 1-2 per window: avg bedtime + avg wake lines
+    # Layout: [bars, bed_7d, wake_7d, bed_14d, wake_14d, bed_30d, wake_30d]
+    for i, w in enumerate(WINDOWS):
+        a = avgs[w]
+        dur_label = f"{a['avg_dur_min'] // 60}h {a['avg_dur_min'] % 60:02d}m"
+        visible = i == 0  # only 7d visible by default
+
+        fig.add_trace(go.Scatter(
+            x=[dates[0], dates[-1]],
+            y=[a["avg_bed"], a["avg_bed"]],
+            mode="lines",
+            line=dict(color="#1A5276", width=2, dash="solid"),
+            name=f"Avg bedtime: {shifted_to_label(a['avg_bed'])}",
+            hoverinfo="skip",
+            visible=visible,
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=[dates[0], dates[-1]],
+            y=[a["avg_wake"], a["avg_wake"]],
+            mode="lines",
+            line=dict(color="#1ABC9C", width=2, dash="dot"),
+            name=f"Avg wake: {shifted_to_label(a['avg_wake'])} · Avg duration: {dur_label}",
+            hoverinfo="skip",
+            visible=visible,
+        ))
+
+    # Buttons: update x-axis range + toggle which average traces are visible
+    def make_visibility(active_idx: int) -> list[bool]:
+        # Trace 0 (bars) always visible, then pairs per window
+        vis = [True]
+        for i in range(len(WINDOWS)):
+            vis += [i == active_idx, i == active_idx]
+        return vis
+
+    buttons = []
+    for i, w in enumerate(WINDOWS):
+        a = avgs[w]
+        buttons.append(dict(
+            label=f"{w} days",
+            method="update",
+            args=[
+                {"visible": make_visibility(i)},
+                {"xaxis.range": [a["start_date"], dates[-1]]},
+            ],
+        ))
+
+    # Y-axis ticks: every 2 hours from 6 PM to 10 AM next day
+    y_ticks = [i * 2 for i in range(3, 12)]  # shifted: 6, 8, 10, ... 22
+    y_labels = [shifted_to_label(h) for h in y_ticks]
+
+    fig.update_layout(
+        title=dict(text="Sleep Consistency", font=dict(size=20)),
+        updatemenus=[dict(
+            type="buttons",
+            direction="right",
+            x=0.0,
+            y=1.12,
+            showactive=True,
+            active=0,
+            buttons=buttons,
+            bgcolor="#f0f0f0",
+            bordercolor="#cccccc",
+        )],
+        xaxis=dict(
+            title="Date",
+            type="date",
+            range=[avgs[7]["start_date"], dates[-1]],
+            rangeslider=dict(visible=True, thickness=0.08),
+        ),
+        yaxis=dict(
+            title="Time of day",
+            tickvals=y_ticks,
+            ticktext=y_labels,
+            range=[5, 23],
+            fixedrange=True,
+        ),
+        legend=dict(orientation="h", y=-0.25),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        height=560,
+        bargap=0.25,
+        margin=dict(t=80, b=100),
+    )
+
+    fig.write_html(
+        OUTPUT,
+        include_plotlyjs="cdn",
+        full_html=True,
+        config={"displayModeBar": False},
+    )
+    print(f"Chart saved to {OUTPUT}")
+
+
+if __name__ == "__main__":
+    main()

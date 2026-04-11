@@ -2,3 +2,4 @@ garminconnect
 curl_cffi
 gspread
 google-auth
+plotly
