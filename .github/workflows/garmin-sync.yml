@@ -1,0 +1,32 @@
+name: Garmin Data Sync
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 7 AM UTC = 8 AM CET / 9 AM CEST
+  workflow_dispatch:       # allow manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore Garmin token
+        run: |
+          mkdir -p ~/.garminconnect
+          echo "${{ secrets.GARMIN_TOKENS }}" | base64 --decode > ~/.garminconnect/garmin_tokens.json
+          chmod 600 ~/.garminconnect/garmin_tokens.json
+
+      - name: Run sync
+        run: python collect.py
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
