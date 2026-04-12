@@ -47,10 +47,13 @@ def compute_window_averages(rows: list[dict], days: int) -> dict:
     avg_bed = sum(bed_hours) / len(bed_hours)
     avg_wake = sum(wake_hours) / len(wake_hours)
     avg_dur_min = round(sum(durations) / len(durations) * 60)
+    scores = [r["sleep_score"] for r in subset if r["sleep_score"]]
+    avg_score = round(sum(scores) / len(scores)) if scores else None
     return {
         "avg_bed": avg_bed,
         "avg_wake": avg_wake,
         "avg_dur_min": avg_dur_min,
+        "avg_score": avg_score,
         "start_date": (subset[0]["date"] - timedelta(days=1)).isoformat(),
     }
 
@@ -157,12 +160,14 @@ def main():
 
     def make_annotation(a: dict) -> dict:
         dur = f"{a['avg_dur_min'] // 60}h {a['avg_dur_min'] % 60:02d}m"
+        score_part = f" · score {a['avg_score']}" if a["avg_score"] is not None else ""
         return dict(
             text=(
                 f"<b>Avg</b>  "
                 f"sleep {shifted_to_label(a['avg_bed'])} "
                 f"· wake {shifted_to_label(a['avg_wake'])} "
                 f"· {dur}"
+                f"{score_part}"
             ),
             x=1.0, y=1.065,
             xref="paper", yref="paper",
