@@ -13,7 +13,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 LOCAL_TZ = ZoneInfo("Europe/Amsterdam")
-SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID", "1kw91StScRpDGMtyTvgO5GCQHX43I28llMQ0b78EUf2E")
+SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 
