@@ -10,7 +10,10 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import gspread
+from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
+
+load_dotenv()
 
 LOCAL_TZ = ZoneInfo("Europe/Amsterdam")
 SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
@@ -26,22 +29,22 @@ def get_sheets_client() -> gspread.Client:
     return gspread.authorize(creds)
 
 
-def _parse_dt(value: str) -> datetime | None:
+def _parse_dt(value: str | int | float | None) -> datetime | None:
     if not value:
         return None
-    return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=LOCAL_TZ)
+    return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S").replace(tzinfo=LOCAL_TZ)
 
 
-def _int(value: str) -> int | None:
+def _int(value: str | int | float | None) -> int | None:
     try:
-        return int(value)
+        return int(value)  # type: ignore[arg-type]
     except (ValueError, TypeError):
         return None
 
 
-def _float(value: str) -> float | None:
+def _float(value: str | int | float | None) -> float | None:
     try:
-        return float(value)
+        return float(value)  # type: ignore[arg-type]
     except (ValueError, TypeError):
         return None
 
@@ -65,7 +68,7 @@ def fetch_sleep_data(days: int = 30) -> list[dict]:
             continue
 
         rows.append({
-            "date": datetime.strptime(r["date"], "%Y-%m-%d").date(),
+            "date": datetime.strptime(str(r["date"]), "%Y-%m-%d").date(),
             "sleep_start": sleep_start,
             "sleep_end": sleep_end,
             "total_sleep_seconds": total,

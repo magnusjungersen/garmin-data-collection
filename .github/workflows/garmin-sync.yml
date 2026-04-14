@@ -2,7 +2,8 @@ name: Garmin Data Sync
 
 on:
   schedule:
-    - cron: '0 7 * * *'  # 7 AM UTC = 8 AM CET / 9 AM CEST
+    - cron: '0 7 * * *'  # 9 AM CEST (UTC+2, summer)
+    - cron: '0 8 * * *'  # 9 AM CET  (UTC+1, winter)
   workflow_dispatch:       # allow manual trigger from GitHub UI
 
 jobs:
