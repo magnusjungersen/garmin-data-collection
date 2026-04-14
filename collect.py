@@ -2,13 +2,16 @@ import os
 import json
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from dotenv import load_dotenv
 from garminconnect import Garmin
 import gspread
 from google.oauth2.service_account import Credentials
 
+load_dotenv()
+
 TOKEN_STORE = os.path.expanduser("~/.garminconnect")
 LOCAL_TZ = ZoneInfo("Europe/Amsterdam")
-SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID", "1kw91StScRpDGMtyTvgO5GCQHX43I28llMQ0b78EUf2E")
+SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID")
 SHEET_NAME = "Sleep"
 
 
