@@ -22,7 +22,7 @@ password = input("Garmin password: ")
 client = Garmin(
     email=email,
     password=password,
-    prompt_mfa=lambda: input("MFA code (you will receive this via email): ") or None,
+    prompt_mfa=lambda: input("MFA code (you will receive this via email): "),
 )
 
 client.login(TOKEN_STORE)
