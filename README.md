@@ -86,8 +86,10 @@ Copy the printed base64 string — you'll need it in step 6.
 
 Run this once to populate your sheet with all past data from a given start date:
 
+Current date here is fine as oldest data is from 2026-02-06
+
 ```bash
-python backfill.py --start 2024-01-01
+python backfill.py --start 2026-02-05
 ```
 
 Skips days with no recorded sleep (watch not worn). Safe to re-run — it clears and rewrites the sheet from scratch.

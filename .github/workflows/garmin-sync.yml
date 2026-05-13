@@ -36,11 +36,20 @@ jobs:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
 
+
       - name: Generate charts
         run: python garmin_sleep_consistency.py
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+
+      - name: Persist refreshed Garmin token
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          NEW_TOKEN=$(base64 < ~/.garminconnect/garmin_tokens.json | tr -d '\n')
+          gh secret set GARMIN_TOKENS --body "$NEW_TOKEN"
 
       - name: Commit and push updated charts
         run: |

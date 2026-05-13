@@ -12,13 +12,17 @@ from garminconnect import Garmin
 
 TOKEN_STORE = os.path.expanduser("~/.garminconnect")
 
+token_file = os.path.join(TOKEN_STORE, "garmin_tokens.json")
+if os.path.exists(token_file):
+    os.remove(token_file)
+
 email = input("Garmin email: ")
 password = input("Garmin password: ")
 
 client = Garmin(
     email=email,
     password=password,
-    prompt_mfa=lambda: input("MFA code (leave blank if not enabled): ") or None,
+    prompt_mfa=lambda: input("MFA code (you will receive this via email): ") or None,
 )
 
 client.login(TOKEN_STORE)
