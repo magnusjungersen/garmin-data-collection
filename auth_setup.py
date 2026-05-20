@@ -8,7 +8,7 @@ After running this, use export_token.py to get the token for GitHub Actions.
 """
 
 import os
-from garminconnect import Garmin
+from garminconnect import Garmin 
 
 TOKEN_STORE = os.path.expanduser("~/.garminconnect")
 
